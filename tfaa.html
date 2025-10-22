@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFAA Automated Scoring Tool</title>
+    <style>
+        :root {
+            --spacing-xs: clamp(4px, 1vw, 8px);
+            --spacing-sm: clamp(8px, 2vw, 16px);
+            --spacing-md: clamp(16px, 3vw, 32px);
+            --spacing-lg: clamp(24px, 4vw, 48px);
+            --font-size-sm: clamp(0.875rem, 1.5vw, 1rem);
+            --font-size-md: clamp(1rem, 2vw, 1.25rem);
+            --font-size-lg: clamp(1.25rem, 3vw, 2rem);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            min-height: 100vh;
+            width: 100%;
+            font-family: Arial, sans-serif;
+            font-size: var(--font-size-md);
+            line-height: 1.5;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            z-index: 1100;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            height: clamp(40px, 8vw, 80px);
+            width: auto;
+            object-fit: contain;
+        }
+
+        .header-text {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-container {
+            padding: var(--spacing-lg);
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .input-groups-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+            gap: var(--spacing-md);
+            width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .input-label {
+            font-size: var(--font-size-md);
+            color: #333;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
+            min-height: 50px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-box.verified {
+            border-color: #4CAF50;
+        }
+
+        .input-box.error {
+            border-color: #f44336;
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .verify-btn,
+        .clear-btn,
+        .preview-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .verify-btn {
+            background-color: #4CAF50;
+        }
+
+        .verify-btn:hover {
+            background-color: #45a049;
+        }
+
+        .clear-btn {
+            background-color: #f44336;
+        }
+
+        .clear-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .divider {
+            width: 90%;
+            max-width: 1400px;
+            margin: var(--spacing-md) auto;
+            height: 1px;
+            background: #333;
+        }
+
+        .section-header {
+            font-size: var(--font-size-lg);
+            color: #333;
+            margin: var(--spacing-md) auto;
+            width: 90%;
+            max-width: 1400px;
+        }
+
+        .archer-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+            gap: var(--spacing-md);
+            padding: var(--spacing-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        select.input-box {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+
+        .preview-box {
+            grid-column: 1 / -1;
+        }
+
+        .preview-box .input-box {
+            background-color: white;
+            cursor: not-allowed;
+            z-index: 1000;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin: var(--spacing-md) 0;
+        }
+
+        .preview-btn {
+            background-color: #F4D03F;
+            color: black;
+        }
+
+        .preview-btn:hover {
+            background-color: #E5C438;
+        }
+
+        .preview-btn.commit {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .preview-btn.commit:hover {
+            background-color: #45a049;
+        }
+
+        @media (max-width: 480px) {
+            .button-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .verify-btn,
+            .clear-btn,
+            .preview-btn {
+                width: 100%;
+            }
+        }
+
+        @media (hover: none) {
+            .input-box:focus {
+                font-size: 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .cors-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
+            color: #333;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            margin-left: auto;
+        }
+
+        .cors-link:hover {
+            color: #4CAF50;
+        }
+
+        .rocket {
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .cors-link:hover .rocket {
+            transform: rotate(360deg);
+        }
+
+        .autocomplete-container {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            display: none;
+            z-index: 2000;
+            top: 100%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .autocomplete-item.selected {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="/Users/malachihernandez/Desktop/tfaalogo.jpeg" alt="TFAA Logo" class="logo">
+        <h1 class="header-text">Automated Scoring Tool</h1>
+        <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" class="cors-link" title="Launch CORS">
+            <img src="/Users/malachihernandez/Desktop/rocket.png" alt="Launch CORS" class="rocket">
+        </a>
+    </div>
+
+    <h2 class="section-header">Tournament Details</h2>
+
+    <div class="input-container">
+        <div class="input-groups-wrapper">
+            <div class="input-group">
+                <label class="input-label"><strong>Pull Archers From:</strong></label>
+                <input type="url" class="input-box" id="archerSource" placeholder="Enter TFAA results URL">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label"><strong>Post Information To:</strong></label>
+                <input type="url" class="input-box" id="sheetsUrl" placeholder="Enter Google Sheets URL">
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="clear-btn" id="clearBtn">Clear Connections</button>
+            <button class="verify-btn" id="verifyBtn">Verify Connections</button>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2 class="section-header">Archer Details</h2>
+
+    <div class="archer-details">
+        <div class="input-group">
+            <label class="input-label"><strong>Name</strong></label>
+            <input type="text" class="input-box" placeholder="Last, First">
+        </div>
+        <div class="input-group">
+            <label class="input-label"><strong>Division</strong></label>
+            <select class="input-box" id="divisionSelect">
+                <option value="">Select Division</option>
+                <option value="Cub">Cub</option>
+                <option value="Youth">Youth</option>
+                <option value="Young Adult">Young Adult</option>
+                <option value="Adult">Adult</option>
+                <option value="Senior">Senior</option>
+                <option value="Silver Senior">Silver Senior</option>
+                <option value="Master Senior">Master Senior</option>
+                <option value="PRO">PRO</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label"><strong>Gender</strong></label>
+            <select class="input-box" id="genderSelect">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label"><strong>Style</strong></label>
+            <select class="input-box" id="styleSelect">
+                <option value="">Select Style</option>
+                <option value="Freestyle">Freestyle</option>
+                <option value="Freestyle Limited">Freestyle Limited</option>
+                <option value="Barebow Compound">Barebow Compound</option>
+                <option value="Barebow Recurve">Barebow Recurve</option>
+                <option value="Freestyle Limited Recurve">Freestyle Limited Recurve</option>
+                <option value="Bowhunter Freestyle">Bowhunter Freestyle</option>
+                <option value="Modern Bowhunter Freestyle">Modern Bowhunter Freestyle</option>
+                <option value="Traditional">Traditional</option>
+                <option value="Longbow">Longbow</option>
+                <option value="Genesis">Genesis</option>
+            </select>
+        </div>
+        <div class="input-group preview-box">
+            <label class="input-label"><strong>Preview</strong></label>
+            <input type="text" class="input-box" id="previewDisplay" readonly placeholder="Click Preview to see formatted entry">
+        </div>
+    </div>
+
+    <div class="button-container">
+        <button id="previewButton" class="preview-btn">Preview</button>
+    </div>
+
+    <script>
+        let archersList = [];
+
+        async function fetchArchers(url) {
+            try {
+                if (!url) return false;
+
+                // More permissive URL validation
+                try {
+                    new URL(url); // This checks if it's a valid URL
+                } catch {
+                    return false;
+                }
+
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                try {
+                    const response = await fetch(proxyUrl + url);
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    const rows = doc.querySelectorAll('tr');
+                    const names = Array.from(rows)
+                        .map(row => {
+                            const cells = row.querySelectorAll('td');
+                            return cells[1]?.textContent?.trim();
+                        })
+                        .filter(name => name && name !== 'Archer');
+
+                    if (names.length === 0) {
+                        throw new Error('No archer names found');
+                    }
+
+                    archersList = names;
+                    return true;
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    alert('Please activate CORS Anywhere by visiting https://cors-anywhere.herokuapp.com/corsdemo first');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error fetching archers:', error);
+                return false;
+            }
+        }
+
+        async function verifyGoogleSheets(url) {
+            try {
+                return url.includes('docs.google.com/spreadsheets');
+            } catch (error) {
+                console.error('Error verifying Google Sheets:', error);
+                return false;
+            }
+        }
+
+        function setupAutocomplete() {
+            const nameInput = document.querySelector('.archer-details .input-box');
+            
+            const autocompleteContainer = document.createElement('div');
+            autocompleteContainer.id = 'autocompleteList';
+            autocompleteContainer.className = 'autocomplete-container';
+            nameInput.parentElement.style.position = 'relative';
+            nameInput.parentElement.appendChild(autocompleteContainer);
+
+            let selectedIndex = -1;
+
+            // Handle keyboard navigation
+            nameInput.addEventListener('keydown', (e) => {
+                const items = autocompleteContainer.getElementsByClassName('autocomplete-item');
+                
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        if (autocompleteContainer.style.display === 'none') return;
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items);
+                        ensureVisible(items[selectedIndex]);
+                        break;
+                        
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        if (autocompleteContainer.style.display === 'none') return;
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection(items);
+                        if (selectedIndex >= 0) ensureVisible(items[selectedIndex]);
+                        break;
+                        
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && items[selectedIndex]) {
+                            nameInput.value = items[selectedIndex].textContent;
+                            autocompleteContainer.style.display = 'none';
+                            selectedIndex = -1;
+                        }
+                        break;
+                        
+                    case 'Escape':
+                        autocompleteContainer.style.display = 'none';
+                        selectedIndex = -1;
+                        break;
+                }
+            });
+
+            function updateSelection(items) {
+                Array.from(items).forEach((item, index) => {
+                    item.classList.toggle('selected', index === selectedIndex);
+                });
+            }
+
+            function ensureVisible(element) {
+                const container = autocompleteContainer;
+                const containerTop = container.scrollTop;
+                const containerBottom = containerTop + container.clientHeight;
+                const elementTop = element.offsetTop;
+                const elementBottom = elementTop + element.clientHeight;
+
+                if (elementTop < containerTop) {
+                    container.scrollTop = elementTop;
+                } else if (elementBottom > containerBottom) {
+                    container.scrollTop = elementBottom - container.clientHeight;
+                }
+            }
+
+            // Hide suggestions when focus moves to other inputs
+            const allInputs = document.querySelectorAll('.input-box');
+            allInputs.forEach(input => {
+                if (input !== nameInput) {
+                    input.addEventListener('focus', () => {
+                        autocompleteContainer.style.display = 'none';
+                        selectedIndex = -1;
+                    });
+                }
+            });
+
+            nameInput.addEventListener('input', () => {
+                const value = nameInput.value.toLowerCase();
+                selectedIndex = -1;
+                
+                if (!value || archersList.length === 0) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+
+                const matches = archersList.filter(name => 
+                    name.toLowerCase().includes(value)
+                );
+
+                if (matches.length === 0) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+
+                autocompleteContainer.innerHTML = matches
+                    .map(name => `<div class="autocomplete-item">${name}</div>`)
+                    .join('');
+                autocompleteContainer.style.display = 'block';
+
+                const items = autocompleteContainer.getElementsByClassName('autocomplete-item');
+                Array.from(items).forEach(item => {
+                    item.addEventListener('click', () => {
+                        nameInput.value = item.textContent;
+                        autocompleteContainer.style.display = 'none';
+                        selectedIndex = -1;
+                    });
+                    
+                    item.addEventListener('mouseover', () => {
+                        selectedIndex = Array.from(items).indexOf(item);
+                        updateSelection(items);
+                    });
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!nameInput.contains(e.target) && !autocompleteContainer.contains(e.target)) {
+                    autocompleteContainer.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+        }
+
+        document.getElementById('verifyBtn').addEventListener('click', async () => {
+            const archerSource = document.getElementById('archerSource');
+            const sheetsUrl = document.getElementById('sheetsUrl');
+
+            const archersVerified = await fetchArchers(archerSource.value);
+            const sheetsVerified = await verifyGoogleSheets(sheetsUrl.value);
+
+            archerSource.className = `input-box ${archersVerified ? 'verified' : 'error'}`;
+            sheetsUrl.className = `input-box ${sheetsVerified ? 'verified' : 'error'}`;
+
+            if (archersVerified) {
+                setupAutocomplete();
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            const archerSource = document.getElementById('archerSource');
+            const sheetsUrl = document.getElementById('sheetsUrl');
+            
+            archerSource.value = '';
+            sheetsUrl.value = '';
+            
+            archerSource.className = 'input-box';
+            sheetsUrl.className = 'input-box';
+            
+            archersList = [];
+        });
+
+        function setupDivisionSelect() {
+            const divisionSelect = document.getElementById('divisionSelect');
+            const divisions = ["Cub", "Youth", "Young Adult", "Adult", "Senior", "Silver Senior", "Master Senior", "PRO"];
+            
+            divisionSelect.addEventListener('keyup', (e) => {
+                const input = e.target.value.toLowerCase();
+                const currentOptions = Array.from(divisionSelect.options);
+                
+                while (divisionSelect.options.length > 1) {
+                    divisionSelect.remove(1);
+                }
+                
+                divisions
+                    .filter(div => div.toLowerCase().includes(input))
+                    .forEach(div => {
+                        const option = new Option(div, div);
+                        divisionSelect.add(option);
+                    });
+            });
+        }
+
+        function setupGenderSelect() {
+            const genderSelect = document.getElementById('genderSelect');
+            const genders = ["Male", "Female"];
+            
+            genderSelect.addEventListener('keyup', (e) => {
+                const input = e.target.value.toLowerCase();
+                
+                while (genderSelect.options.length > 1) {
+                    genderSelect.remove(1);
+                }
+                
+                genders
+                    .filter(gender => gender.toLowerCase().includes(input))
+                    .forEach(gender => {
+                        const option = new Option(gender, gender);
+                        genderSelect.add(option);
+                    });
+            });
+        }
+
+        function setupStyleSelect() {
+            const styleSelect = document.getElementById('styleSelect');
+            const styles = [
+                "Freestyle",
+                "Freestyle Limited",
+                "Barebow",
+                "Freestyle Limited Recurve",
+                "Bowhunter Freestyle",
+                "Traditional",
+                "Barebow Recurve",
+                "Longbow",
+                "Genesis"
+            ];
+            
+            styleSelect.addEventListener('keyup', (e) => {
+                const input = e.target.value.toLowerCase();
+                
+                while (styleSelect.options.length > 1) {
+                    styleSelect.remove(1);
+                }
+                
+                styles
+                    .filter(style => style.toLowerCase().includes(input))
+                    .forEach(style => {
+                        const option = new Option(style, style);
+                        styleSelect.add(option);
+                    });
+            });
+        }
+
+        function setupPreviewFunctionality() {
+            const previewBtn = document.getElementById('previewButton');
+            const previewDisplay = document.getElementById('previewDisplay');
+            const nameInput = document.querySelector('.archer-details .input-box');
+            const inputs = [
+                nameInput,
+                document.getElementById('divisionSelect'),
+                document.getElementById('genderSelect'),
+                document.getElementById('styleSelect')
+            ];
+
+            inputs.forEach(input => {
+                ['change', 'input'].forEach(event => {
+                    input.addEventListener(event, () => {
+                        if (previewBtn.classList.contains('commit')) {
+                            previewBtn.textContent = 'Preview';
+                            previewBtn.classList.remove('commit');
+                            previewDisplay.value = '';
+                            previewDisplay.placeholder = 'Click Preview to see formatted entry';
+                        }
+                    });
+                });
+            });
+
+            const divisionAbbr = {
+                'Cub': 'C',
+                'Youth': 'Y',
+                'Young Adult': 'YA',
+                'Adult': 'A',
+                'Senior': 'S',
+                'Silver Senior': 'SS',
+                'Master Senior': 'MS',
+                'PRO': 'PRO'
+            };
+
+            const genderAbbr = {
+                'Male': 'M',
+                'Female': 'F'
+            };
+
+            const styleAbbr = {
+                'Freestyle': 'FS',
+                'Freestyle Limited': 'FSL',
+                'Barebow Compound': 'BBC',
+                'Barebow Recurve': 'BBR',
+                'Freestyle Limited Recurve': 'FSLR',
+                'Bowhunter Freestyle': 'BHFS',
+                'Modern Bowhunter Freestyle': 'MBH',
+                'Traditional': 'TRAD',
+                'Longbow': 'LB',
+                'Genesis': 'GEN'
+            };
+
+            // Debounce function
+            const debounce = (func, delay) => {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            };
+
+            // Debounced submit function
+            const debouncedSubmitToGoogleSheets = debounce(submitToGoogleSheets, 1000); // 1000ms debounce
+
+            previewBtn.addEventListener('click', async () => {
+                if (!previewBtn.classList.contains('commit')) {
+                    const isValid = inputs.every(input => input.value.trim() !== '');
+                    
+                    inputs.forEach(input => {
+                        input.classList.toggle('error', !input.value.trim());
+                    });
+
+                    if (!isValid) return;
+
+                    const abbreviation = `${divisionAbbr[inputs[1].value]}${genderAbbr[inputs[2].value]}${styleAbbr[inputs[3].value]}`;
+                    const previewText = `${nameInput.value} - ${abbreviation}`;
+                    previewDisplay.value = previewText;
+                    previewDisplay.placeholder = '';
+                    previewBtn.textContent = 'Commit Changes';
+                    previewBtn.classList.add('commit');
+                } else {
+                    const success = await debouncedSubmitToGoogleSheets(previewDisplay.value);
+                    if (success) {
+                        // Reset form
+                        nameInput.value = ''; // Clear the name input
+                        document.getElementById('divisionSelect').selectedIndex = 0;
+                        document.getElementById('genderSelect').selectedIndex = 0;
+                        document.getElementById('styleSelect').selectedIndex = 0;
+
+                        // Also clear error classes if any
+                        inputs.forEach(input => input.classList.remove('error'));
+
+                        previewBtn.textContent = 'Preview';
+                        previewBtn.classList.remove('commit');
+                        previewDisplay.value = '';
+                        previewDisplay.placeholder = 'Click Preview to see formatted entry';
+                    }
+                }
+            });
+
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    input.classList.remove('error');
+                });
+            });
+        }
+
+        async function submitToGoogleSheets(data) {
+            const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx5H4LH759kxIA8KzqmgvhSJp8hjF1PhW39HH1lbe4Q8POQtVZ0w7PfUUcStB59eFqN/exec';
+            const sheetsUrl = document.getElementById('sheetsUrl').value;
+            
+            try {
+                const response = await fetch(SHEETS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        data,
+                        sheetsUrl 
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Google Sheets submission failed:', response.status, response.statusText);
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Submission error:', error);
+                return false;
+            }
+        }
+
+        setupDivisionSelect();
+        setupGenderSelect();
+        setupStyleSelect();
+        setupPreviewFunctionality();
+    </script>
+</body>
+</html>
